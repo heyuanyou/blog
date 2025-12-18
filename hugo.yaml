@@ -2,6 +2,7 @@ baseURL: "https://examplesite.com/"
 title: ExampleSite
 pagination.pagerSize: 5
 theme: PaperMod
+publishDir: docs
 
 enableRobotsTXT: true
 buildDrafts: false
