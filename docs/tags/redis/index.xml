@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Redis on ExampleSite</title>
+    <link>https://heyuanyou.github.io/blog/tags/redis/</link>
+    <description>Recent content in Redis on ExampleSite</description>
+    <image>
+      <title>ExampleSite</title>
+      <url>https://heyuanyou.github.io/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</url>
+      <link>https://heyuanyou.github.io/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</link>
+    </image>
+    <generator>Hugo -- 0.152.2</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 01 Jan 2024 00:00:00 +0800</lastBuildDate>
+    <atom:link href="https://heyuanyou.github.io/blog/tags/redis/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Redis 面试题</title>
+      <link>https://heyuanyou.github.io/blog/posts/interview/redis/</link>
+      <pubDate>Mon, 01 Jan 2024 00:00:00 +0800</pubDate>
+      <guid>https://heyuanyou.github.io/blog/posts/interview/redis/</guid>
+      <description>Redis 相关面试题整理</description>
+    </item>
+  </channel>
+</rss>
