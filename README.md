@@ -23,7 +23,8 @@
 ---
 title: "文章标题"
 date: 2026-08-05
-tags: ["Golang", "Gin"]
+main: "语言"
+sub: ["golang", "gin"]
 summary: "一句话摘要"
 ---
 
