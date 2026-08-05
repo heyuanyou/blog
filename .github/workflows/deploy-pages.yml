@@ -1,0 +1,53 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "index.html"
+      - "Blog.dc.html"
+      - "support.js"
+      - "posts/**"
+      - ".github/workflows/deploy-pages.yml"
+      - ".github/workflows/update-post-manifest.yml"
+      - "scripts/update_manifest.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare site artifact
+        run: |
+          mkdir -p _site/posts
+          cp index.html Blog.dc.html support.js _site/
+          cp posts/manifest.json _site/posts/
+          cp posts/*.md _site/posts/
+          touch _site/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
