@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Gitlab-Ci on Henry&#39;s Blog</title>
+    <link>http://localhost:1313/blog/tags/gitlab-ci/</link>
+    <description>Recent content in Gitlab-Ci on Henry&#39;s Blog</description>
+    <image>
+      <title>Henry&#39;s Blog</title>
+      <url>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</url>
+      <link>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</link>
+    </image>
+    <generator>Hugo -- 0.152.2</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 16 Jan 2026 14:00:00 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/blog/tags/gitlab-ci/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>从零构建基于 Supervisor 的高可用部署流：K8S 工程师视角</title>
+      <link>http://localhost:1313/blog/posts/devops/supervisor_guide/</link>
+      <pubDate>Fri, 16 Jan 2026 14:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/devops/supervisor_guide/</guid>
+      <description>抛开 K8S 的复杂性，如何在传统 VM 环境下打造一套稳健的生产级部署流？本文以 Go 项目为例，详解 Supervisor 的进程编排、CI/CD 集成及在富容器/消息队列场景下的最佳实践。</description>
+    </item>
+  </channel>
+</rss>

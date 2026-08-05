@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Raft on Henry&#39;s Blog</title>
+    <link>http://localhost:1313/blog/tags/raft/</link>
+    <description>Recent content in Raft on Henry&#39;s Blog</description>
+    <image>
+      <title>Henry&#39;s Blog</title>
+      <url>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</url>
+      <link>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</link>
+    </image>
+    <generator>Hugo -- 0.152.2</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 27 Dec 2025 00:00:00 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/blog/tags/raft/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Raft 算法详解：分布式一致性算法入门</title>
+      <link>http://localhost:1313/blog/posts/algorithm/raft/</link>
+      <pubDate>Sat, 27 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/algorithm/raft/</guid>
+      <description>深入浅出地讲解 Raft 分布式一致性算法，包括基础概念、工作原理、选举机制、日志复制等核心内容，配有详细示例和图示</description>
+    </item>
+  </channel>
+</rss>

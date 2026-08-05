@@ -1,31 +1,129 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>Posts on ExampleSite</title>
-    <link>https://heyuanyou.github.io/blog/posts/</link>
-    <description>Recent content in Posts on ExampleSite</description>
+    <title>Posts on Henry&#39;s Blog</title>
+    <link>http://localhost:1313/blog/posts/</link>
+    <description>Recent content in Posts on Henry&#39;s Blog</description>
     <image>
-      <title>ExampleSite</title>
-      <url>https://heyuanyou.github.io/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</url>
-      <link>https://heyuanyou.github.io/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</link>
+      <title>Henry&#39;s Blog</title>
+      <url>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</url>
+      <link>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</link>
     </image>
     <generator>Hugo -- 0.152.2</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 26 Dec 2025 14:24:00 +0800</lastBuildDate>
-    <atom:link href="https://heyuanyou.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 27 Jan 2026 18:00:00 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/blog/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>做市策略知识手册</title>
+      <link>http://localhost:1313/blog/posts/amm/trader-knowledge/</link>
+      <pubDate>Tue, 27 Jan 2026 18:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/amm/trader-knowledge/</guid>
+      <description>基于 Trader Tool 原型图，讲解做市基础知识、策略原理与实操示例</description>
+    </item>
+    <item>
+      <title>从零构建基于 Supervisor 的高可用部署流：K8S 工程师视角</title>
+      <link>http://localhost:1313/blog/posts/devops/supervisor_guide/</link>
+      <pubDate>Fri, 16 Jan 2026 14:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/devops/supervisor_guide/</guid>
+      <description>抛开 K8S 的复杂性，如何在传统 VM 环境下打造一套稳健的生产级部署流？本文以 Go 项目为例，详解 Supervisor 的进程编排、CI/CD 集成及在富容器/消息队列场景下的最佳实践。</description>
+    </item>
+    <item>
+      <title>Rust 编程语言：从入门到精通</title>
+      <link>http://localhost:1313/blog/posts/language/rust/</link>
+      <pubDate>Sat, 10 Jan 2026 00:18:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/language/rust/</guid>
+      <description>Rust 编程语言全面指南，深入解析所有权系统、生命周期、并发编程、错误处理等核心概念，涵盖从基础到高级的各个方面</description>
+    </item>
+    <item>
+      <title>Kubernetes StatefulSet：有状态应用管理详解</title>
+      <link>http://localhost:1313/blog/posts/techstack/k8sstatefulset/</link>
+      <pubDate>Sat, 10 Jan 2026 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/k8sstatefulset/</guid>
+      <description>Kubernetes StatefulSet 全面指南，深入解析有状态应用管理、稳定的网络标识、有序部署、持久化存储等核心特性，涵盖从基础到高级的各个方面</description>
+    </item>
+    <item>
+      <title>跳表（Skip List）详解：基于 Golang 的实现与分析</title>
+      <link>http://localhost:1313/blog/posts/algorithm/skiplist/</link>
+      <pubDate>Sun, 04 Jan 2026 12:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/algorithm/skiplist/</guid>
+      <description>深入讲解跳表数据结构，包括基础概念、数据结构设计、核心操作实现、时间复杂度分析、与平衡树对比、实际应用场景和 Golang 完整实现</description>
+    </item>
+    <item>
+      <title>gRPC 详解：高性能 RPC 框架的深度解析</title>
+      <link>http://localhost:1313/blog/posts/techstack/grpc/</link>
+      <pubDate>Sun, 04 Jan 2026 11:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/grpc/</guid>
+      <description>深入讲解 gRPC 框架，包括基础概念、Protocol Buffers、服务类型、流式处理、错误处理、性能优化、与 REST 对比、应用场景和最佳实践</description>
+    </item>
+    <item>
+      <title>服务发现与注册详解：微服务架构的核心组件</title>
+      <link>http://localhost:1313/blog/posts/service/service-discover-register/</link>
+      <pubDate>Mon, 29 Dec 2025 12:20:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/service/service-discover-register/</guid>
+      <description>深入讲解服务发现与注册机制，包括基础概念、实现模式、常见工具（Consul、Eureka、Nacos）、实现原理、应用场景和最佳实践</description>
+    </item>
+    <item>
+      <title>MySQL 面试高频考点精讲</title>
+      <link>http://localhost:1313/blog/posts/techstack/mysql/</link>
+      <pubDate>Sun, 28 Dec 2025 12:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/mysql/</guid>
+      <description>精选 MySQL 高频面试题，剔除基础语法，聚焦底层原理、性能调优、事务与锁机制等核心深度知识点。</description>
+    </item>
+    <item>
+      <title>Golang 面试题</title>
+      <link>http://localhost:1313/blog/posts/language/golang/</link>
+      <pubDate>Sun, 28 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/language/golang/</guid>
+      <description>Golang 面试题整理，涵盖基础到高级的各个方面，包括语法、并发编程、内存管理、接口、错误处理、性能优化等</description>
+    </item>
+    <item>
+      <title>Canal 详解：MySQL Binlog 增量订阅与消费组件</title>
+      <link>http://localhost:1313/blog/posts/techstack/canal/</link>
+      <pubDate>Sat, 27 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/canal/</guid>
+      <description>深入讲解 Canal，阿里巴巴开源的 MySQL binlog 增量订阅与消费组件，包括工作原理、架构设计、使用场景、配置部署等</description>
+    </item>
+    <item>
+      <title>PostgreSQL 面试题</title>
+      <link>http://localhost:1313/blog/posts/techstack/postgres/</link>
+      <pubDate>Sat, 27 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/postgres/</guid>
+      <description>PostgreSQL 面试题整理，涵盖基础到高级的各个方面，包括 SQL、索引、事务、MVCC、性能优化、主从复制、高级特性等</description>
+    </item>
+    <item>
+      <title>Raft 算法详解：分布式一致性算法入门</title>
+      <link>http://localhost:1313/blog/posts/algorithm/raft/</link>
+      <pubDate>Sat, 27 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/algorithm/raft/</guid>
+      <description>深入浅出地讲解 Raft 分布式一致性算法，包括基础概念、工作原理、选举机制、日志复制等核心内容，配有详细示例和图示</description>
+    </item>
     <item>
       <title>Solidity 面试题</title>
-      <link>https://heyuanyou.github.io/blog/posts/interview/solidity/</link>
+      <link>http://localhost:1313/blog/posts/techstack/solidity/</link>
       <pubDate>Fri, 26 Dec 2025 14:24:00 +0800</pubDate>
-      <guid>https://heyuanyou.github.io/blog/posts/interview/solidity/</guid>
+      <guid>http://localhost:1313/blog/posts/techstack/solidity/</guid>
       <description>Solidity 智能合约开发面试题整理，涵盖基础到高级的各个方面</description>
     </item>
     <item>
-      <title>Redis 面试题</title>
-      <link>https://heyuanyou.github.io/blog/posts/interview/redis/</link>
-      <pubDate>Mon, 01 Jan 2024 00:00:00 +0800</pubDate>
-      <guid>https://heyuanyou.github.io/blog/posts/interview/redis/</guid>
-      <description>Redis 相关面试题整理</description>
+      <title>Kafka 面试题</title>
+      <link>http://localhost:1313/blog/posts/techstack/kafka/</link>
+      <pubDate>Fri, 26 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/kafka/</guid>
+      <description>Kafka 面试题整理，涵盖基础到高级的各个方面，包括架构、消息存储、副本机制、性能优化、流处理等</description>
+    </item>
+    <item>
+      <title>MySQL 面试题</title>
+      <link>http://localhost:1313/blog/posts/techstack/mysql2/</link>
+      <pubDate>Fri, 26 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/mysql2/</guid>
+      <description>MySQL 面试题整理，涵盖基础到高级的各个方面，包括 SQL、索引、事务、存储引擎、性能优化、主从复制等</description>
+    </item>
+    <item>
+      <title>Redis</title>
+      <link>http://localhost:1313/blog/posts/techstack/redis/</link>
+      <pubDate>Fri, 26 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/redis/</guid>
+      <description>Redis介绍，涵盖基础到高级的各个方面，包括数据结构、持久化、高可用、性能优化等</description>
     </item>
   </channel>
 </rss>

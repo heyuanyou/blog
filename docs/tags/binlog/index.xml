@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Binlog on Henry&#39;s Blog</title>
+    <link>http://localhost:1313/blog/tags/binlog/</link>
+    <description>Recent content in Binlog on Henry&#39;s Blog</description>
+    <image>
+      <title>Henry&#39;s Blog</title>
+      <url>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</url>
+      <link>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</link>
+    </image>
+    <generator>Hugo -- 0.152.2</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 27 Dec 2025 00:00:00 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/blog/tags/binlog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Canal 详解：MySQL Binlog 增量订阅与消费组件</title>
+      <link>http://localhost:1313/blog/posts/techstack/canal/</link>
+      <pubDate>Sat, 27 Dec 2025 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/techstack/canal/</guid>
+      <description>深入讲解 Canal，阿里巴巴开源的 MySQL binlog 增量订阅与消费组件，包括工作原理、架构设计、使用场景、配置部署等</description>
+    </item>
+  </channel>
+</rss>

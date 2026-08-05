@@ -1,5 +1,5 @@
 baseURL: "https://heyuanyou.github.io/blog/"
-title: ExampleSite
+title: Henry's Blog
 pagination.pagerSize: 5
 theme: PaperMod
 publishDir: docs
@@ -22,10 +22,10 @@ outputs:
 
 params:
   env: production # to enable google analytics, opengraph, twitter-cards and schema.
-  title: ExampleSite
-  description: "ExampleSite description"
-  keywords: [Blog, Portfolio, PaperMod]
-  author: Me
+  title: Henry's Blog
+  description: "The way to record my career and life"
+  keywords: [Blog, web3, career, life]
+  author: Henry
   # author: ["Me", "You"] # multiple authors
   images: ["<link or path of image for opengraph, twitter-cards>"]
   DateFormat: "January 2, 2006"
@@ -39,6 +39,7 @@ params:
   ShowCodeCopyButtons: false
   ShowWordCount: true
   ShowRssButtonInSectionTermList: true
+  ShowPageNums: true
   UseHugoToc: true
   disableSpecial1stPost: false
   disableScrollToTop: false
@@ -58,7 +59,7 @@ params:
     safari_pinned_tab: "<link / abs url>"
 
   label:
-    text: "Henry回收站"
+    text: "Henry's Blog"
     icon: /apple-touch-icon.png
     iconHeight: 35
 
@@ -79,16 +80,18 @@ params:
 
   # home-info mode
   homeInfoParams:
-    Title: "Hi there \U0001F44B"
+    Title: "Web3从业者 \U0001F44B"
     Content: Welcome to my blog
 
   socialIcons:
-    - name: x
-      url: "https://x.com/"
-    - name: stackoverflow
-      url: "https://stackoverflow.com"
+    # - name: x
+    #   url: "https://x.com/"
+    # - name: stackoverflow
+    #   url: "https://stackoverflow.com"
+    - name: linkedin
+      url: "https://www.linkedin.com/in/henry-he-7a8b1b287"
     - name: github
-      url: "https://github.com/"
+      url: "https://github.com/heyuanyou"
 
   analytics:
     google:
@@ -125,9 +128,13 @@ menu:
       name: 归档
       url: /archives/
       weight: 5
-    - identifier: categories
+    - identifier: interview-section
+      name: 面试
+      url: /posts/interview/
+      weight: 6
+    - identifier: search
       name: 搜索
-      url: /categories/
+      url: /search/
       weight: 10
     - identifier: tags
       name: 标签

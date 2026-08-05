@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Memory-Safety on Henry&#39;s Blog</title>
+    <link>http://localhost:1313/blog/tags/memory-safety/</link>
+    <description>Recent content in Memory-Safety on Henry&#39;s Blog</description>
+    <image>
+      <title>Henry&#39;s Blog</title>
+      <url>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</url>
+      <link>http://localhost:1313/blog/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</link>
+    </image>
+    <generator>Hugo -- 0.152.2</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 10 Jan 2026 00:18:00 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/blog/tags/memory-safety/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Rust 编程语言：从入门到精通</title>
+      <link>http://localhost:1313/blog/posts/language/rust/</link>
+      <pubDate>Sat, 10 Jan 2026 00:18:00 +0800</pubDate>
+      <guid>http://localhost:1313/blog/posts/language/rust/</guid>
+      <description>Rust 编程语言全面指南，深入解析所有权系统、生命周期、并发编程、错误处理等核心概念，涵盖从基础到高级的各个方面</description>
+    </item>
+  </channel>
+</rss>
