@@ -27,6 +27,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -34,6 +37,9 @@ jobs:
 
       - name: Set up Pages
         uses: actions/configure-pages@v5
+
+      - name: Generate post manifest
+        run: python3 scripts/update_manifest.py
 
       - name: Prepare site artifact
         run: |
