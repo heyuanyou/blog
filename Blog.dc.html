@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body { margin: 0; background: oklch(0.16 0.02 250); }
+    a { color: oklch(0.78 0.16 200); }
+    a:hover { color: oklch(0.88 0.16 200); }
+    #md-body h2 { font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 600; color: oklch(0.93 0.005 250); margin: 36px 0 14px; }
+    #md-body h3 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; color: oklch(0.93 0.005 250); margin: 28px 0 10px; }
+    #md-body p { font-family: 'IBM Plex Sans', sans-serif; font-size: 17px; line-height: 1.85; color: oklch(0.85 0.01 250); margin: 0 0 18px; }
+    #md-body ul, #md-body ol { font-family: 'IBM Plex Sans', sans-serif; font-size: 17px; line-height: 1.85; color: oklch(0.85 0.01 250); margin: 0 0 18px; padding-left: 24px; }
+    #md-body li { margin-bottom: 8px; }
+    #md-body code { font-family: 'JetBrains Mono', monospace; background: oklch(0.25 0.02 250); padding: 2px 6px; border-radius: 4px; font-size: 15px; color: oklch(0.78 0.16 200); }
+    #md-body pre { background: oklch(0.12 0.015 250); border: 1px solid oklch(0.32 0.02 250); border-radius: 8px; padding: 18px; overflow-x: auto; margin: 0 0 22px; }
+    #md-body pre code { background: none; padding: 0; color: oklch(0.88 0.01 250); }
+    #md-body strong { color: oklch(0.95 0.005 250); }
+  </style>
+</helmet>
+<div style="min-height: 100vh; background: oklch(0.16 0.02 250); color: oklch(0.93 0.005 250); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column;">
+  <header style="position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 40px; background: oklch(0.16 0.02 250); border-bottom: 1px solid oklch(0.32 0.02 250);">
+    <div style="display: flex; align-items: center; gap: 32px;">
+      <a href="#" style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: oklch(0.93 0.005 250); text-decoration: none;">Henry<span style="color: oklch(0.78 0.16 200);">.</span></a>
+      <nav style="display: flex; gap: 20px;">
+        <a href="#list" style="font-size: 15px; font-weight: 500; text-decoration: none; color: {{ navListColor }};">全部文章</a>
+      </nav>
+    </div>
+    <form onSubmit="{{ onSearchSubmit }}" style="display: flex; align-items: center; gap: 8px; background: oklch(0.21 0.02 250); border: 1px solid oklch(0.32 0.02 250); border-radius: 8px; padding: 8px 14px;">
+      <input value="{{ searchDraft }}" onChange="{{ onSearchChange }}" placeholder="搜索标题、内容或标签…" style="background: none; border: none; outline: none; color: oklch(0.93 0.005 250); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; width: 220px;"></input>
+    </form>
+  </header>
+
+  <main style="flex: 1; width: 100%; max-width: 1080px; margin: 0 auto; padding: 48px 40px 96px; box-sizing: border-box;">
+
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 80px 0; text-align: center; color: oklch(0.62 0.01 250); font-family: 'JetBrains Mono', monospace;">加载文章中…</div>
+    </sc-if>
+
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="position: relative; height: {{ cloudHeight }}px; perspective: 1000px; margin: 8px 0 8px;" onMouseEnter="{{ onCloudEnter }}" onMouseLeave="{{ onCloudLeave }}">
+        <div style="position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d;">
+          <sc-for list="{{ tagsData }}" as="tag" hint-placeholder-count="12">
+            <div onClick="{{ tag.onClick }}" style="position: absolute; left: 0; top: 0; width: {{ tag.size }}px; height: {{ tag.size }}px; transform: {{ tag.transform }}; opacity: {{ tag.opacity }}; z-index: {{ tag.zIndex }}; cursor: pointer; user-select: none;">
+              <div style="position: absolute; inset: 0; clip-path: polygon(50% 2%, 93% 26%, 93% 74%, 50% 98%, 7% 74%, 7% 26%); background: oklch(0.5 0.12 200 / 0.5);"></div>
+              <div style="position: absolute; inset: 2px; clip-path: polygon(50% 2%, 93% 26%, 93% 74%, 50% 98%, 7% 74%, 7% 26%); background: oklch(0.19 0.02 250); display: flex; align-items: center; justify-content: center; padding: 6px; text-align: center;">
+                <span style="font-family: 'Space Grotesk', sans-serif; font-size: {{ tag.fontSize }}px; font-weight: 600; color: oklch(0.78 0.16 200); line-height: 1.2; white-space: nowrap;">{{ tag.name }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px;">
+        <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 24px; margin: 0;">{{ listTitle }}</h2>
+        <a href="#list" style="font-size: 13px; font-family: 'JetBrains Mono', monospace; color: oklch(0.62 0.01 250); text-decoration: none;">清除筛选</a>
+      </div>
+
+      <div style="margin-bottom: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: oklch(0.62 0.01 250); text-transform: uppercase; letter-spacing: 1px;">一级标签</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px;">
+        <sc-for list="{{ mainFilters }}" as="ft" hint-placeholder-count="8">
+          <button onClick="{{ ft.onClick }}" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 5px 12px; border-radius: 20px; cursor: pointer; border: 1px solid {{ ft.borderColor }}; background: {{ ft.bg }}; color: {{ ft.color }};">{{ ft.label }}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ showSubFilters }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: oklch(0.62 0.01 250); text-transform: uppercase; letter-spacing: 1px;">二级标签</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px;">
+          <sc-for list="{{ subFilters }}" as="ft" hint-placeholder-count="8">
+            <button onClick="{{ ft.onClick }}" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 5px 12px; border-radius: 20px; cursor: pointer; border: 1px solid {{ ft.borderColor }}; background: {{ ft.bg }}; color: {{ ft.color }};">{{ ft.label }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasList }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <sc-for list="{{ pagePosts }}" as="post" hint-placeholder-count="6">
+            <a href="{{ post.href }}" style="display: block; padding: 22px 26px; background: oklch(0.21 0.02 250); border: 1px solid oklch(0.32 0.02 250); border-radius: 10px; text-decoration: none;" style-hover="border-color: oklch(0.5 0.12 200); background: oklch(0.24 0.02 250); text-decoration: none;">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: oklch(0.62 0.01 250); margin-bottom: 8px;">{{ post.date }}</div>
+              <div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; color: oklch(0.93 0.005 250); margin-bottom: 8px;">{{ post.title }}</div>
+              <div style="font-size: 15px; color: oklch(0.65 0.01 250); line-height: 1.6; margin-bottom: 12px;">{{ post.summary }}</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 12px; padding: 3px 10px; border-radius: 20px; background: oklch(0.26 0.06 200); color: oklch(0.78 0.16 200); font-family: 'JetBrains Mono', monospace;">{{ post.main }}</span>
+                <sc-for list="{{ post.sub }}" as="t" hint-placeholder-count="2">
+                  <span style="font-size: 12px; padding: 3px 10px; border-radius: 20px; background: oklch(0.21 0.02 250); border: 1px solid oklch(0.32 0.02 250); color: oklch(0.65 0.01 250); font-family: 'JetBrains Mono', monospace;">{{ t }}</span>
+                </sc-for>
+              </div>
+            </a>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasListEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 60px 0; text-align: center; color: oklch(0.62 0.01 250);">没有找到匹配的文章。</div>
+      </sc-if>
+
+      <sc-if value="{{ hasPagination }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; justify-content: center; gap: 8px; margin-top: 36px;">
+          <sc-for list="{{ pageNumbers }}" as="pn" hint-placeholder-count="3">
+            <button onClick="{{ pn.onClick }}" style="width: 36px; height: 36px; border-radius: 6px; border: 1px solid oklch(0.32 0.02 250); background: {{ pn.bg }}; color: {{ pn.color }}; font-family: 'JetBrains Mono', monospace; font-size: 14px; cursor: pointer;">{{ pn.n }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isPost }}" hint-placeholder-val="{{ false }}">
+      <sc-if value="{{ hasCurrentPost }}" hint-placeholder-val="{{ true }}">
+        <div style="position: sticky; top: 82px; z-index: 10; display: flex; align-items: center; gap: 12px; background: oklch(0.16 0.02 250); padding: 10px 0 16px;">
+          <button onClick="{{ goBack }}" style="display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: oklch(0.78 0.16 200); background: oklch(0.21 0.02 250); border: 1px solid oklch(0.32 0.02 250); border-radius: 6px; padding: 8px 14px; cursor: pointer;">← 返回</button>
+          <button onClick="{{ toggleToc }}" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: oklch(0.62 0.01 250); background: oklch(0.21 0.02 250); border: 1px solid oklch(0.32 0.02 250); border-radius: 6px; padding: 8px 14px; cursor: pointer;">{{ tocToggleIcon }} {{ tocButtonLabel }}</button>
+        </div>
+        <div style="display: flex; gap: 20px; align-items: flex-start;">
+          <aside style="width: {{ tocWidth }}; flex-shrink: 0; position: sticky; top: 140px; max-height: calc(100vh - 160px); overflow: hidden; transition: width 0.2s ease;">
+            <sc-if value="{{ tocOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="height: 100%; max-height: calc(100vh - 160px); overflow-y: auto; overscroll-behavior: contain; border-left: 2px solid oklch(0.32 0.02 250); padding-left: 16px; padding-right: 8px; white-space: normal;">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: oklch(0.62 0.01 250); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">目录</div>
+                <sc-for list="{{ toc }}" as="item" hint-placeholder-count="4">
+                  <a href="javascript:void(0)" onClick="{{ item.onClick }}" style="display: block; font-size: 14px; color: oklch(0.65 0.01 250); line-height: 1.5; padding: {{ item.padding }}; margin-bottom: 8px; text-decoration: none; word-break: break-word;">{{ item.text }}</a>
+                </sc-for>
+              </div>
+            </sc-if>
+          </aside>
+          <article style="flex: 1; min-width: 0;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: oklch(0.62 0.01 250); margin-bottom: 10px;">{{ currentPost.date }}</div>
+            <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; margin: 0 0 16px;">{{ currentPost.title }}</h1>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px;">
+              <span style="font-size: 12px; padding: 3px 10px; border-radius: 20px; background: oklch(0.26 0.06 200); color: oklch(0.78 0.16 200); font-family: 'JetBrains Mono', monospace;">{{ currentPost.main }}</span>
+              <sc-for list="{{ currentPost.sub }}" as="t" hint-placeholder-count="2">
+                <span style="font-size: 12px; padding: 3px 10px; border-radius: 20px; background: oklch(0.21 0.02 250); border: 1px solid oklch(0.32 0.02 250); color: oklch(0.65 0.01 250); font-family: 'JetBrains Mono', monospace;">{{ t }}</span>
+              </sc-for>
+            </div>
+            {{ postContentEl }}
+          </article>
+        </div>
+      </sc-if>
+      <sc-if value="{{ notFound }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 60px 0; text-align: center; color: oklch(0.62 0.01 250);">文章不存在。<a href="#list" style="color: oklch(0.78 0.16 200);">返回列表</a></div>
+      </sc-if>
+    </sc-if>
+
+  </main>
+
+  <footer style="padding: 24px 40px; text-align: center; border-top: 1px solid oklch(0.32 0.02 250); font-family: 'JetBrains Mono', monospace; font-size: 12px; color: oklch(0.5 0.01 250);">© 2026 Henry · 用 Markdown 记录</footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    route: { view: 'home' },
+    posts: [],
+    loading: true,
+    rotation: 0,
+    paused: false,
+    tocOpen: true,
+    searchDraft: ''
+  };
+
+  parseHash() {
+    const hash = (window.location.hash || '').replace(/^#/, '');
+    if (hash.startsWith('post/')) {
+      return { view: 'post', slug: decodeURIComponent(hash.slice(5)) };
+    }
+    if (hash.startsWith('list')) {
+      const qIdx = hash.indexOf('?');
+      const params = new URLSearchParams(qIdx >= 0 ? hash.slice(qIdx + 1) : '');
+      return {
+        view: 'list',
+        main: params.get('main') || '',
+        sub: params.get('sub') || '',
+        tag: params.get('tag') || '',
+        query: params.get('q') || '',
+        page: parseInt(params.get('page') || '1', 10) || 1
+      };
+    }
+    return { view: 'home' };
+  }
+
+  parseFrontmatter(raw) {
+    const m = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+    if (!m) return { meta: {}, body: raw };
+    const meta = {};
+    m[1].split('\n').forEach((line) => {
+      const idx = line.indexOf(':');
+      if (idx < 0) return;
+      const key = line.slice(0, idx).trim();
+      let val = line.slice(idx + 1).trim();
+      if (val.startsWith('[') && val.endsWith(']')) {
+        val = val.slice(1, -1).split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      } else {
+        val = val.replace(/^['"]|['"]$/g, '');
+      }
+      meta[key] = val;
+    });
+    return { meta, body: m[2] };
+  }
+
+  onHashChange = () => {
+    this.setState({ route: this.parseHash() });
+  };
+
+  componentDidMount() {
+    window.addEventListener('hashchange', this.onHashChange);
+    this.onHashChange();
+    fetch('posts/manifest.json', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((files) =>
+        Promise.all(
+          files.map((f) =>
+            fetch('posts/' + f, { cache: 'no-store' })
+              .then((r) => r.text())
+              .then((raw) => {
+                const { meta, body } = this.parseFrontmatter(raw);
+                const slug = f.replace(/\.md$/, '').replace(/^\d{4}-\d{2}-\d{2}-/, '');
+                return {
+                  slug,
+                  title: meta.title || slug,
+                  date: meta.date || '',
+                  main: meta.main || '其他',
+                  sub: Array.isArray(meta.sub) ? meta.sub : meta.sub ? [meta.sub] : (Array.isArray(meta.tags) ? meta.tags : meta.tags ? [meta.tags] : []),
+                  summary: meta.summary || '',
+                  body
+                };
+              })
+          )
+        )
+      )
+      .then((posts) => {
+        posts.sort((a, b) => (a.date < b.date ? 1 : -1));
+        this.setState({ posts, loading: false });
+      });
+    this.rotInterval = setInterval(() => {
+      if (!this.state.paused) {
+        this.setState((s) => ({ rotation: s.rotation + 0.008 }));
+      }
+    }, 30);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('hashchange', this.onHashChange);
+    clearInterval(this.rotInterval);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const route = s.route || { view: 'home' };
+    const posts = s.posts || [];
+
+    const mainCounts = {};
+    const subCountsByMain = {};
+    const allTagCounts = {};
+    posts.forEach((p) => {
+      const main = p.main || '其他';
+      mainCounts[main] = (mainCounts[main] || 0) + 1;
+      allTagCounts[main] = (allTagCounts[main] || 0) + 1;
+      if (!subCountsByMain[main]) subCountsByMain[main] = {};
+      (p.sub || []).forEach((t) => {
+        subCountsByMain[main][t] = (subCountsByMain[main][t] || 0) + 1;
+        allTagCounts[t] = (allTagCounts[t] || 0) + 1;
+      });
+    });
+    const mainNames = Object.keys(mainCounts);
+    const allTagNames = Object.keys(allTagCounts);
+    const n = allTagNames.length;
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const cosA = Math.cos(s.rotation || 0);
+    const sinA = Math.sin(s.rotation || 0);
+    const tilt = 0.4;
+    const cosT = Math.cos(tilt);
+    const sinT = Math.sin(tilt);
+    const R = Math.max(150, Math.min(320, 42 * Math.sqrt(Math.max(n, 1))));
+    const cloudHeight = Math.round(Math.max(420, Math.min(760, R * 2.7)));
+    const sizeScale = n <= 15 ? 1 : Math.max(0.55, 15 / n);
+    const tagsData = allTagNames.map((name, i) => {
+      const yy = n <= 1 ? 0 : 1 - (i / (n - 1)) * 2;
+      const radiusAtY = Math.sqrt(Math.max(0, 1 - yy * yy));
+      const theta = goldenAngle * i;
+      const x0 = Math.cos(theta) * radiusAtY;
+      const z0 = Math.sin(theta) * radiusAtY;
+      // tilt sphere so poles aren't stuck on the spin axis
+      const y1 = yy * cosT - z0 * sinT;
+      const z1 = yy * sinT + z0 * cosT;
+      const x = x0 * cosA + z1 * sinA;
+      const z = -x0 * sinA + z1 * cosA;
+      const y = y1;
+      const depth = (z + 1) / 2;
+      const scale = 0.6 + depth * 0.7;
+      const count = allTagCounts[name] || 1;
+      const fontSize = Math.round((12 + Math.min(count, 5) * 1.4) * sizeScale);
+      const size = Math.round(Math.max((58 + Math.min(count, 5) * 9) * sizeScale, name.length * fontSize * 0.62 + 22));
+      const isMainTag = mainNames.includes(name);
+      return {
+        name,
+        onClick: () => {
+          const params = new URLSearchParams();
+          if (isMainTag) params.set('main', name);
+          else params.set('tag', name);
+          window.location.hash = 'list?' + params.toString();
+        },
+        transform: `translate3d(${(x * R).toFixed(1)}px, ${(y * R * 0.85).toFixed(1)}px, 0) translate(-50%, -50%) scale(${scale.toFixed(2)})`,
+        opacity: (0.4 + depth * 0.6).toFixed(2),
+        zIndex: Math.round(depth * 100),
+        size,
+        fontSize,
+        isMainTag
+      };
+    });
+
+    const mainFilters = [
+      { key: '', label: '全部' },
+      ...mainNames.sort().map((t) => ({ key: t, label: `${t} (${mainCounts[t]})` }))
+    ].map((t) => {
+      const active = (route.main || '') === t.key || (!(route.main || '') && !(route.tag || '') && t.key === '');
+      return {
+        ...t,
+        onClick: () => {
+          window.location.hash = t.key ? 'list?main=' + encodeURIComponent(t.key) : 'list';
+        },
+        bg: active ? 'oklch(0.26 0.06 200)' : 'oklch(0.21 0.02 250)',
+        color: active ? 'oklch(0.78 0.16 200)' : 'oklch(0.65 0.01 250)',
+        borderColor: active ? 'oklch(0.5 0.12 200)' : 'oklch(0.32 0.02 250)'
+      };
+    });
+
+    const currentSubCounts = route.main ? (subCountsByMain[route.main] || {}) : {};
+    const subFilters = [{ key: '', label: '全部' }, ...Object.keys(currentSubCounts).sort().map((t) => ({ key: t, label: `${t} (${currentSubCounts[t]})` }))].map((item) => {
+      const t = item.key;
+      const active = (route.sub || '') === t;
+      return {
+        key: t,
+        label: item.label,
+        onClick: () => {
+          const params = new URLSearchParams();
+          params.set('main', route.main);
+          if (t) params.set('sub', t);
+          window.location.hash = 'list?' + params.toString();
+        },
+        bg: active ? 'oklch(0.26 0.06 200)' : 'oklch(0.21 0.02 250)',
+        color: active ? 'oklch(0.78 0.16 200)' : 'oklch(0.65 0.01 250)',
+        borderColor: active ? 'oklch(0.5 0.12 200)' : 'oklch(0.32 0.02 250)'
+      };
+    });
+
+    let filtered = posts;
+    if (route.main) filtered = filtered.filter((p) => p.main === route.main);
+    if (route.sub) filtered = filtered.filter((p) => (p.sub || []).includes(route.sub));
+    if (route.tag) filtered = filtered.filter((p) => p.main === route.tag || (p.sub || []).includes(route.tag));
+    if (route.query) {
+      const q = route.query.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          p.body.toLowerCase().includes(q) ||
+          (p.summary || '').toLowerCase().includes(q) ||
+          (p.main || '').toLowerCase().includes(q) ||
+          (p.sub || []).some((tag) => tag.toLowerCase().includes(q))
+      );
+    }
+    const pageSize = 8;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const page = Math.min(Math.max(1, route.page || 1), totalPages);
+    const pagePosts = filtered.slice((page - 1) * pageSize, page * pageSize).map((p) => ({
+      ...p,
+      href: '#post/' + p.slug
+    }));
+
+    const gotoPage = (p) => {
+      const params = new URLSearchParams();
+      if (route.main) params.set('main', route.main);
+      if (route.sub) params.set('sub', route.sub);
+      if (route.tag) params.set('tag', route.tag);
+      if (route.query) params.set('q', route.query);
+      params.set('page', p);
+      window.location.hash = 'list?' + params.toString();
+    };
+    const pageNumbers = Array.from({ length: totalPages }, (_, i) => ({
+      n: i + 1,
+      onClick: () => gotoPage(i + 1),
+      bg: i + 1 === page ? 'oklch(0.26 0.06 200)' : 'oklch(0.21 0.02 250)',
+      color: i + 1 === page ? 'oklch(0.78 0.16 200)' : 'oklch(0.62 0.01 250)'
+    }));
+
+    let currentPost = null;
+    let postContentEl = null;
+    const toc = [];
+    if (route.view === 'post') {
+      currentPost = posts.find((p) => p.slug === route.slug) || null;
+      if (currentPost) {
+        const rawHtml = window.marked ? window.marked.parse(currentPost.body) : '<pre>' + currentPost.body + '</pre>';
+        const doc = new DOMParser().parseFromString(rawHtml, 'text/html');
+        doc.querySelectorAll('h2, h3').forEach((h, i) => {
+          const id = 'h-' + i;
+          h.id = id;
+          toc.push({
+            id,
+            text: h.textContent,
+            padding: h.tagName === 'H3' ? '0 0 0 14px' : '0',
+            onClick: () => {
+              const el = document.getElementById(id);
+              if (el) {
+                const y = el.getBoundingClientRect().top + window.scrollY - 90;
+                window.scrollTo({ top: y, behavior: 'smooth' });
+              }
+            }
+          });
+        });
+        postContentEl = React.createElement('div', { id: 'md-body', dangerouslySetInnerHTML: { __html: doc.body.innerHTML } });
+      }
+    }
+
+    return {
+      loading: s.loading,
+      isHome: !s.loading && route.view === 'home',
+      isList: !s.loading && route.view === 'list',
+      isPost: !s.loading && route.view === 'post',
+      navListColor: route.view === 'list' ? 'oklch(0.78 0.16 200)' : 'oklch(0.62 0.01 250)',
+      tagsData,
+      cloudHeight,
+      onCloudEnter: () => this.setState({ paused: true }),
+      onCloudLeave: () => this.setState({ paused: false }),
+      listTitle: route.sub ? `${route.main} / ${route.sub}` : route.main ? route.main : route.tag ? `标签: ${route.tag}` : route.query ? `搜索: "${route.query}"` : '全部文章',
+      mainFilters,
+      subFilters,
+      showSubFilters: !!route.main && subFilters.length > 1,
+      pagePosts,
+      hasList: pagePosts.length > 0,
+      hasListEmpty: pagePosts.length === 0,
+      hasPagination: totalPages > 1,
+      pageNumbers,
+      hasCurrentPost: !!currentPost,
+      notFound: !currentPost,
+      currentPost,
+      postContentEl,
+      toc,
+      tocOpen: s.tocOpen,
+      tocWidth: s.tocOpen ? '200px' : '0px',
+      tocButtonLabel: s.tocOpen ? '隐藏目录' : '显示目录',
+      tocToggleIcon: s.tocOpen ? '«' : '»',
+      toggleToc: () => this.setState((st) => ({ tocOpen: !st.tocOpen })),
+      goBack: () => window.history.back(),
+      searchDraft: s.searchDraft || '',
+      onSearchChange: (e) => this.setState({ searchDraft: e.target.value }),
+      onSearchSubmit: (e) => {
+        e.preventDefault();
+        const q = (this.state.searchDraft || '').trim();
+        if (q) {
+          const params = new URLSearchParams();
+          if (route.main) params.set('main', route.main);
+          if (route.sub) params.set('sub', route.sub);
+          if (route.tag) params.set('tag', route.tag);
+          params.set('q', q);
+          window.location.hash = 'list?' + params.toString();
+        }
+      }
+    };
+  }
+}
+
+</script>
+</body>
+</html>

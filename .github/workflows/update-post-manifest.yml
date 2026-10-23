@@ -1,0 +1,43 @@
+name: Update Post Manifest
+
+on:
+  push:
+    paths:
+      - "posts/*.md"
+      - "scripts/update_manifest.py"
+      - ".github/workflows/update-post-manifest.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-manifest:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Update manifest
+        run: python3 scripts/update_manifest.py
+
+      - name: Commit changes
+        run: |
+          if git diff --quiet -- posts/manifest.json; then
+            echo "No manifest changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add posts/manifest.json
+          git commit -m "chore: update post manifest"
+          git push
