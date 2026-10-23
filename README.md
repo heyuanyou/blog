@@ -6,8 +6,7 @@
 
 1. 在 [posts](/Users/yuanyouhe/projects/blog/posts) 下新增或修改 `.md` 文件
 2. `git add . && git commit && git push`
-3. GitHub Actions 自动更新 `posts/manifest.json`
-4. GitHub Pages 自动发布站点
+3. 合并到 `main` 后，GitHub Actions 自动构建并发布到 GitHub Pages
 
 ## 文章格式
 
@@ -31,30 +30,30 @@ summary: "一句话摘要"
 正文内容
 ```
 
+## 访问地址
+
+| 页面 | URL |
+|---|---|
+| 首页 | `https://heyuanyou.github.io/blog/` |
+| 文章列表 | `https://heyuanyou.github.io/blog/list`（筛选：`/list?main=面试&sub=mysql`、`?tag=`、`?q=`、`?page=`） |
+| 文章 | `https://heyuanyou.github.io/blog/post/<slug>`，slug 为文件名去掉日期前缀和 `.md` |
+
+旧的 `Blog.dc.html#list`、`Blog.dc.html#post/xxx` 链接会自动跳转到新地址。
+
 ## 本地启动
 
-这是纯静态站点，页面通过 `fetch` 加载 `posts/manifest.json` 等资源，直接双击用 `file://` 打开会被浏览器的 CORS 限制拦截，需要起一个本地 HTTP 服务器预览：
+用构建产物预览，和线上行为一致（`serve` 支持 `/list` → `list.html` 这种无扩展名路径）：
 
 ```bash
-# 任选其一
-python3 -m http.server 8000
-# 或
-npx serve .
+python3 scripts/build_site.py   # 生成 _site/，同时更新 posts/manifest.json
+npx serve _site
 ```
 
-然后浏览器访问 http://localhost:8000 （会自动跳转到 [Blog.dc.html](/Users/yuanyouhe/projects/blog/Blog.dc.html:1)）。
-
-如果本地新增/修改了 `posts/*.md`，预览前需要先手动生成一次 manifest（线上则由 GitHub Actions 在推送后自动生成）：
-
-```bash
-python3 scripts/update_manifest.py
-```
+然后访问 http://localhost:3000 。
 
 ## 自动化
 
-- [scripts/update_manifest.py](/Users/yuanyouhe/projects/blog/scripts/update_manifest.py:1)
-  扫描 `posts/*.md` 并生成 [posts/manifest.json](/Users/yuanyouhe/projects/blog/posts/manifest.json:1)
-- [.github/workflows/update-post-manifest.yml](/Users/yuanyouhe/projects/blog/.github/workflows/update-post-manifest.yml:1)
-  在文章变更后自动回写 `manifest.json`
-- [.github/workflows/deploy-pages.yml](/Users/yuanyouhe/projects/blog/.github/workflows/deploy-pages.yml:1)
-  自动发布到 GitHub Pages
+- `scripts/update_manifest.py`：扫描 `posts/*.md` 生成 `posts/manifest.json`
+- `scripts/build_site.py`：生成 `_site/`，为首页、列表和每篇文章各生成一个入口页，部署时由 Actions 调用
+- `.github/workflows/update-post-manifest.yml`：文章变更后回写仓库里的 `manifest.json`
+- `.github/workflows/deploy-pages.yml`：合并到 `main` 后构建并发布到 GitHub Pages

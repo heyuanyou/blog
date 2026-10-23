@@ -40,7 +40,7 @@ PostgreSQL 是一个功能强大的开源关系型数据库管理系统（RDBMS�
 - **跨平台**：支持 Windows、Linux、macOS 等
 
 **与其他数据库对比：**
-- **vs MySQL**：功能更丰富，标准兼容性更好
+- **vs MySQL**：功能更丰富，标准兼容性更好（详见第 4 题）
 - **vs Oracle**：开源免费，功能接近商业数据库
 - **vs MongoDB**：关系型数据库，但支持 JSON 和数组
 
@@ -138,18 +138,60 @@ Backend Process（处理请求）
 
 **答案：**
 
-| 特性 | PostgreSQL | MySQL |
-|------|-----------|-------|
-| **SQL 标准** | 高度符合 SQL 标准 | 部分符合 |
-| **数据类型** | 丰富（数组、JSON、范围等） | 基础类型 |
-| **窗口函数** | 完整支持 | MySQL 8.0+ 支持 |
-| **JSON 支持** | 原生支持 JSON/JSONB | MySQL 5.7+ 支持 |
-| **存储引擎** | 单一存储引擎 | 多种存储引擎 |
-| **MVCC** | 表级 MVCC | InnoDB 行级 MVCC |
-| **事务隔离** | 完整支持所有隔离级别 | 部分支持 |
-| **全文搜索** | 内置全文搜索 | 需要 MyISAM 或插件 |
-| **扩展性** | 支持扩展（Extension） | 支持插件 |
-| **性能** | 复杂查询性能好 | 简单查询性能好 |
+**一句话概括：** 两者都是行级 MVCC 的关系型数据库，根本差异在**存储组织方式**：InnoDB 是"聚簇索引 + 原地更新 + undo log"，PostgreSQL 是"堆表 + 追加新版本 + VACUUM 回收"。隔离级别语义、复制方式、运维痛点的差异，大多由这一点延伸出来。
+
+**对比总表**（MySQL 以 8.0 / InnoDB 为准）：
+
+| 维度 | PostgreSQL | MySQL (InnoDB) |
+|------|-----------|----------------|
+| 表组织 | 堆表（heap），行无序存放 | 聚簇索引，行按主键顺序存放在 B+ 树叶子节点 |
+| 索引指向 | 所有索引都指向元组物理位置 `ctid` | 二级索引存主键值，查询需回表 |
+| MVCC 实现 | UPDATE = 插入新元组 + 旧元组标记 `xmax`，旧版本留在表里 | 原地更新，旧版本写入 undo log，通过回滚指针串成版本链 |
+| 旧版本清理 | VACUUM / autovacuum | 后台 purge 线程清理 undo |
+| 默认隔离级别 | READ COMMITTED | REPEATABLE READ |
+| 可串行化实现 | SSI（可串行化快照隔离，乐观检测冲突） | 普通 SELECT 自动变成加共享锁的读（悲观加锁） |
+| 复制 | WAL 物理流复制；PG 10+ 支持逻辑复制 | binlog 逻辑复制（row / statement / mixed） |
+| 连接模型 | 每连接一个进程，一般需要 PgBouncer 做连接池 | 每连接一个线程 |
+| DDL | 支持事务性 DDL，可回滚 | DDL 会隐式提交事务；8.0 起单条 DDL 原子，但不能放进事务回滚 |
+| 索引类型 | B-tree、Hash、GIN、GiST、SP-GiST、BRIN；支持部分索引、表达式索引、INCLUDE | B+ 树、全文索引、空间索引；8.0.13+ 支持函数索引，不支持部分索引 |
+| 数据类型 | 数组、范围类型、JSONB、UUID、inet 等，可自定义类型 | 常规类型 + JSON（5.7+），无数组类型 |
+| 全文检索 | 内置 tsvector + GIN，中文需 zhparser / pg_jieba 等扩展 | InnoDB FULLTEXT（5.6+），中文用 ngram 分词（5.7.6+） |
+| 自增主键 | SEQUENCE / IDENTITY（序列不受事务回滚影响，会有空洞） | AUTO_INCREMENT |
+| 存储引擎 | 单一（PG 12 起提供表访问方法接口） | 可插拔（InnoDB、MyISAM 等） |
+| 扩展生态 | Extension 机制：PostGIS、TimescaleDB、pgvector 等 | 插件机制；分库分表中间件生态更成熟 |
+
+**展开 1：存储结构与 MVCC（最常被追问）**
+
+- **InnoDB**：数据就存在主键的 B+ 树里。UPDATE 直接改这条记录，改之前把旧值写进 undo log，记录里的 `DB_ROLL_PTR` 指向旧版本；一致性读沿版本链找到对当前 ReadView 可见的版本。主键要尽量单调递增，否则页分裂严重；二级索引查非索引列要回表。
+- **PostgreSQL**：表是无序的堆。UPDATE 不改原元组，而是写一个新元组，旧元组的 `xmax` 设为当前事务 ID。可见性由 `xmin` / `xmax` 加事务快照判断（见第 15 题）。
+- **由此带来的差异**：
+  - **写放大**：PG 的索引指向物理位置，行一换位置，**所有索引都要跟着更新**。缓解手段是 **HOT（Heap-Only Tuple）**：被更新的列都不在任何索引上、并且同一个页里还有空间时，就不需要更新索引。可以调低 `fillfactor` 给页面留空间，提高 HOT 命中率。InnoDB 只有改到索引列时才动对应的二级索引。
+  - **膨胀**：PG 的死元组留在表和索引里，靠 VACUUM 标记成可复用空间（普通 VACUUM 不会把空间还给操作系统，`VACUUM FULL` / `pg_repack` 才会）。长事务会卡住清理，导致表膨胀。InnoDB 的长事务则会导致 undo 堆积（history list length 变大）。
+  - **XID 回卷**：PG 的事务 ID 是 32 位，必须定期 freeze 老元组，否则会触发强制的防回卷 VACUUM，极端情况下数据库拒绝写入。这是 PG 特有的运维风险。
+  - **主键选择**：InnoDB 对主键是否有序很敏感；PG 是堆表，主键只是一个普通的唯一索引，用随机 UUID 的代价相对小一些（索引本身仍会离散写入）。
+
+**展开 2：隔离级别的语义差异**
+
+- MySQL 默认 **RR**：普通 SELECT 走快照读，事务内结果稳定；`SELECT ... FOR UPDATE`、UPDATE、DELETE 这类**当前读**用 next-key lock（记录锁 + 间隙锁）防止幻读，代价是间隙锁容易引发死锁、降低并发。
+- PG 默认 **RC**，每条语句取一次新快照。PG 的 **RR 是快照隔离**，同样不会出现幻读；但如果两个事务并发更新同一行，后提交的那个会报错 `could not serialize access due to concurrent update`，**应用必须重试**。而 MySQL RR 下 UPDATE 读的是最新已提交版本，不报错，但要留意丢失更新这类问题。
+- **SERIALIZABLE**：PG 用 SSI，不额外加锁，检测到读写依赖成环就让其中一个事务失败；MySQL 靠给读加锁实现，并发度低。
+- PG 不支持真正的 READ UNCOMMITTED，设置后行为等同 RC（见第 12 题）。
+
+**展开 3：复制与 CDC**
+
+- MySQL：binlog 在 server 层，和 InnoDB 的 redo log 之间用两阶段提交保证一致。主从复制和 CDC（Canal、Debezium）都消费 binlog。
+- PG：WAL 本身就是 redo 日志，流复制把 WAL 原样发给备库，备库在物理上与主库一致（hot standby 可以只读查询），但要求大版本相同。跨版本迁移、只同步部分表、CDC 用**逻辑复制 / 逻辑解码**（publication/subscription、`pgoutput`、`wal2json`，Debezium 也支持）。
+
+**展开 4：其他高频点**
+
+- **连接**：PG 每个连接一个进程，内存开销大，连接数通常控制在几百个以内，前面放 PgBouncer（事务模式）。MySQL 是线程模型，单机能撑更多连接。
+- **事务性 DDL**：PG 可以 `BEGIN; ALTER ...; ROLLBACK;`，适合把迁移脚本整体包在一个事务里；`CREATE INDEX CONCURRENTLY` 等少数语句例外。MySQL 的 DDL 会隐式提交事务，在线改表通常借助 Online DDL 或 gh-ost / pt-osc。
+- **SQL 能力**：窗口函数、CTE 两边都有（MySQL 8.0 起支持）；PG 还有 `RETURNING`、`ON CONFLICT`、`LATERAL`、`FILTER`、物化视图、部分索引等。MySQL 对应的写法是 `INSERT ... ON DUPLICATE KEY UPDATE`。
+
+**选型建议（面试回答模板）：**
+- **MySQL**：互联网高并发 OLTP、以主键 / 简单查询为主、需要成熟的分库分表方案和 DBA 生态。
+- **PostgreSQL**：复杂查询和分析、需要丰富的数据类型（JSONB、数组、GIS、向量）、需要严格的事务语义或事务性 DDL、希望用扩展满足需求而不是再引入新的组件。
+- 补一句经验：**PG 的运维重点是 VACUUM、膨胀和连接池；MySQL 的运维重点是主键设计、间隙锁死锁和大表 DDL。** 能答出这一句，说明真正用过两者。
 
 ---
 

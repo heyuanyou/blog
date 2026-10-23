@@ -3,6 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  (function () {
+    var meta = document.querySelector('meta[name="blog-base"]');
+    var base;
+    if (meta) {
+      base = meta.content;
+    } else {
+      var p = window.location.pathname;
+      var i = p.search(/\/(list|post\/[^/]*)\/?$/);
+      base = i >= 0 ? p.slice(0, i + 1) : p.replace(/[^/]*$/, '');
+    }
+    window.__BLOG_BASE__ = base;
+    var el = document.createElement('base');
+    el.href = base;
+    document.head.appendChild(el);
+  })();
+</script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -28,9 +45,9 @@
 <div style="min-height: 100vh; background: oklch(0.16 0.02 250); color: oklch(0.93 0.005 250); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column;">
   <header style="position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 40px; background: oklch(0.16 0.02 250); border-bottom: 1px solid oklch(0.32 0.02 250);">
     <div style="display: flex; align-items: center; gap: 32px;">
-      <a href="#" style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: oklch(0.93 0.005 250); text-decoration: none;">Henry<span style="color: oklch(0.78 0.16 200);">.</span></a>
+      <a href="./" style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: oklch(0.93 0.005 250); text-decoration: none;">Henry<span style="color: oklch(0.78 0.16 200);">.</span></a>
       <nav style="display: flex; gap: 20px;">
-        <a href="#list" style="font-size: 15px; font-weight: 500; text-decoration: none; color: {{ navListColor }};">全部文章</a>
+        <a href="list" style="font-size: 15px; font-weight: 500; text-decoration: none; color: {{ navListColor }};">全部文章</a>
       </nav>
     </div>
     <form onSubmit="{{ onSearchSubmit }}" style="display: flex; align-items: center; gap: 8px; background: oklch(0.21 0.02 250); border: 1px solid oklch(0.32 0.02 250); border-radius: 8px; padding: 8px 14px;">
@@ -62,7 +79,7 @@
     <sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px;">
         <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 24px; margin: 0;">{{ listTitle }}</h2>
-        <a href="#list" style="font-size: 13px; font-family: 'JetBrains Mono', monospace; color: oklch(0.62 0.01 250); text-decoration: none;">清除筛选</a>
+        <a href="list" style="font-size: 13px; font-family: 'JetBrains Mono', monospace; color: oklch(0.62 0.01 250); text-decoration: none;">清除筛选</a>
       </div>
 
       <div style="margin-bottom: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: oklch(0.62 0.01 250); text-transform: uppercase; letter-spacing: 1px;">一级标签</div>
@@ -142,7 +159,7 @@
         </div>
       </sc-if>
       <sc-if value="{{ notFound }}" hint-placeholder-val="{{ false }}">
-        <div style="padding: 60px 0; text-align: center; color: oklch(0.62 0.01 250);">文章不存在。<a href="#list" style="color: oklch(0.78 0.16 200);">返回列表</a></div>
+        <div style="padding: 60px 0; text-align: center; color: oklch(0.62 0.01 250);">文章不存在。<a href="list" style="color: oklch(0.78 0.16 200);">返回列表</a></div>
       </sc-if>
     </sc-if>
 
@@ -164,14 +181,21 @@ class Component extends DCLogic {
     searchDraft: ''
   };
 
-  parseHash() {
+  parseRoute() {
+    const base = window.__BLOG_BASE__ || '/';
+    // 兼容旧链接：#post/xxx、#list?... 转成路径
     const hash = (window.location.hash || '').replace(/^#/, '');
-    if (hash.startsWith('post/')) {
-      return { view: 'post', slug: decodeURIComponent(hash.slice(5)) };
+    if (hash.startsWith('post/') || hash.startsWith('list')) {
+      window.history.replaceState(null, '', base + hash);
     }
-    if (hash.startsWith('list')) {
-      const qIdx = hash.indexOf('?');
-      const params = new URLSearchParams(qIdx >= 0 ? hash.slice(qIdx + 1) : '');
+    const path = window.location.pathname;
+    let rest = path.startsWith(base) ? path.slice(base.length) : '';
+    rest = rest.replace(/^(index|Blog\.dc|404)\.html$/, '').replace(/\.html$/, '').replace(/\/$/, '');
+    if (rest.startsWith('post/')) {
+      return { view: 'post', slug: decodeURIComponent(rest.slice(5)) };
+    }
+    if (rest === 'list') {
+      const params = new URLSearchParams(window.location.search);
       return {
         view: 'list',
         main: params.get('main') || '',
@@ -183,6 +207,46 @@ class Component extends DCLogic {
     }
     return { view: 'home' };
   }
+
+  go = (path) => {
+    window.history.pushState(null, '', (window.__BLOG_BASE__ || '/') + path);
+    this.setState({ route: this.parseRoute() });
+    window.scrollTo(0, 0);
+  };
+
+  scrollToAnchor(id) {
+    const slugify = (t) => t.trim().toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s/g, '-');
+    const target = slugify(id);
+    let el = document.getElementById(id);
+    if (!el) {
+      el = Array.from(document.querySelectorAll('#md-body h1, #md-body h2, #md-body h3, #md-body h4'))
+        .find((h) => slugify(h.textContent) === target) || null;
+    }
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 90;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  }
+
+  // 站内链接走 pushState，不整页刷新
+  onDocClick = (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target || a.hasAttribute('download')) return;
+    const raw = a.getAttribute('href') || '';
+    if (raw.startsWith('#')) {
+      e.preventDefault();
+      if (raw.length > 1) this.scrollToAnchor(decodeURIComponent(raw.slice(1)));
+      return;
+    }
+    const url = new URL(a.href);
+    const base = window.__BLOG_BASE__ || '/';
+    if (url.origin !== window.location.origin || !url.pathname.startsWith(base)) return;
+    const rest = url.pathname.slice(base.length);
+    if (rest !== '' && rest !== 'list' && !rest.startsWith('post/')) return;
+    e.preventDefault();
+    this.go(rest + url.search);
+  };
 
   parseFrontmatter(raw) {
     const m = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
@@ -203,13 +267,14 @@ class Component extends DCLogic {
     return { meta, body: m[2] };
   }
 
-  onHashChange = () => {
-    this.setState({ route: this.parseHash() });
+  onPopState = () => {
+    this.setState({ route: this.parseRoute() });
   };
 
   componentDidMount() {
-    window.addEventListener('hashchange', this.onHashChange);
-    this.onHashChange();
+    window.addEventListener('popstate', this.onPopState);
+    document.addEventListener('click', this.onDocClick);
+    this.onPopState();
     fetch('posts/manifest.json', { cache: 'no-store' })
       .then((r) => r.json())
       .then((files) =>
@@ -245,7 +310,8 @@ class Component extends DCLogic {
   }
 
   componentWillUnmount() {
-    window.removeEventListener('hashchange', this.onHashChange);
+    window.removeEventListener('popstate', this.onPopState);
+    document.removeEventListener('click', this.onDocClick);
     clearInterval(this.rotInterval);
   }
 
@@ -303,7 +369,7 @@ class Component extends DCLogic {
           const params = new URLSearchParams();
           if (isMainTag) params.set('main', name);
           else params.set('tag', name);
-          window.location.hash = 'list?' + params.toString();
+          this.go('list?' + params.toString());
         },
         transform: `translate3d(${(x * R).toFixed(1)}px, ${(y * R * 0.85).toFixed(1)}px, 0) translate(-50%, -50%) scale(${scale.toFixed(2)})`,
         opacity: (0.4 + depth * 0.6).toFixed(2),
@@ -322,7 +388,7 @@ class Component extends DCLogic {
       return {
         ...t,
         onClick: () => {
-          window.location.hash = t.key ? 'list?main=' + encodeURIComponent(t.key) : 'list';
+          this.go(t.key ? 'list?main=' + encodeURIComponent(t.key) : 'list');
         },
         bg: active ? 'oklch(0.26 0.06 200)' : 'oklch(0.21 0.02 250)',
         color: active ? 'oklch(0.78 0.16 200)' : 'oklch(0.65 0.01 250)',
@@ -341,7 +407,7 @@ class Component extends DCLogic {
           const params = new URLSearchParams();
           params.set('main', route.main);
           if (t) params.set('sub', t);
-          window.location.hash = 'list?' + params.toString();
+          this.go('list?' + params.toString());
         },
         bg: active ? 'oklch(0.26 0.06 200)' : 'oklch(0.21 0.02 250)',
         color: active ? 'oklch(0.78 0.16 200)' : 'oklch(0.65 0.01 250)',
@@ -369,7 +435,7 @@ class Component extends DCLogic {
     const page = Math.min(Math.max(1, route.page || 1), totalPages);
     const pagePosts = filtered.slice((page - 1) * pageSize, page * pageSize).map((p) => ({
       ...p,
-      href: '#post/' + p.slug
+      href: 'post/' + encodeURIComponent(p.slug)
     }));
 
     const gotoPage = (p) => {
@@ -379,7 +445,7 @@ class Component extends DCLogic {
       if (route.tag) params.set('tag', route.tag);
       if (route.query) params.set('q', route.query);
       params.set('page', p);
-      window.location.hash = 'list?' + params.toString();
+      this.go('list?' + params.toString());
     };
     const pageNumbers = Array.from({ length: totalPages }, (_, i) => ({
       n: i + 1,
@@ -457,7 +523,7 @@ class Component extends DCLogic {
           if (route.sub) params.set('sub', route.sub);
           if (route.tag) params.set('tag', route.tag);
           params.set('q', q);
-          window.location.hash = 'list?' + params.toString();
+          this.go('list?' + params.toString());
         }
       }
     };
