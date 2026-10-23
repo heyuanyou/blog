@@ -297,6 +297,16 @@ p := &x           // 取地址
 - 普通 Go 代码**不支持**指针运算（`unsafe` 除外）
 - 对 `nil` 指针解引用会 panic
 
+**值类型 vs 引用类型汇总（面试常见开场题）：**
+
+| 分类 | 类型 | 说明 |
+|------|------|------|
+| **值类型** | `int`/`float`/`bool`/`string`/`array`/`struct` | 赋值、传参都会发生一次完整拷贝，各自独立，互不影响 |
+| **引用类型（或含引用语义）** | `slice`/`map`/`channel`/`interface`/`func`/`pointer` | 内部持有指向底层数据的指针，赋值、传参拷贝的是这个"描述符"本身，多个变量会共享同一份底层数据 |
+
+- 注意"引用类型"在 Go 里不是一个官方术语（Go 规范里没有这个分类），这里是面试口语中常用的通俗说法：准确地说，Go 里**所有的参数传递都是值传递**，只不过 slice/map/channel 这些类型的"值"本身就是一个包含指针的小结构体，拷贝这个结构体不等于拷贝它指向的底层数据，所以表现出了"像引用"的效果。
+- `interface` 归到这一类，是因为它内部也是 `(类型信息, 数据指针)` 这样的结构（见第 11 题）。
+
 ### 8. 数组和切片的区别是什么？
 
 **答案：**
@@ -307,10 +317,26 @@ p := &x           // 取地址
 | **参数传递** | **值传递**（会拷贝整个数组） | **值传递**（复制 slice header，但通常共享同一底层数组） |
 | **内存** | 连续的内存空间 | 包含指针、长度、容量的结构体 |
 | **初始化** | `arr := [3]int{1,2,3}` | `s := []int{1,2,3}` 或 `make([]int, 3)` |
+| **比较** | 元素类型可比较时，可以直接用 `==` 比较两个数组 | **不可比较**，只能用 `== nil` 判断是否为 nil，两个切片之间不能用 `==`（需要比较内容时可用 `reflect.DeepEqual` 或 `slices.Equal`） |
 
 **关键点：**
 - 在函数传参时，推荐使用切片而非数组，避免大内存拷贝。
 - 数组通常用于定长数据的场景，如 UUID、MD5 hash 等。
+
+**nil 切片 vs 空切片（面试高频）：**
+```go
+var s1 []int          // nil 切片：len=0, cap=0，底层指针为 nil
+s2 := []int{}         // 空切片：len=0, cap=0，但底层指针非 nil
+s3 := make([]int, 0)  // 同样是空切片，非 nil
+
+fmt.Println(s1 == nil) // true
+fmt.Println(s2 == nil) // false
+
+b1, _ := json.Marshal(s1) // "null"
+b2, _ := json.Marshal(s2) // "[]"
+```
+- 两者在 `len`、`append`、`range` 等日常操作上表现一致，主要区别在于**是否等于 nil** 和**序列化结果**。
+- 需要对外输出"空数组"而不是 `null` 时（比如 API 返回），要注意用 `[]int{}` 或 `make([]int, 0)`，而不是让变量停留在 nil 切片状态。
 
 ### 9. 切片的底层实现与扩容机制？
 
@@ -337,7 +363,29 @@ type slice struct {
 
 **注意坑点：**
 - **切片截取**：`subSlice := bigSlice[start:end]`，`subSlice` 会持有原大数组的引用。如果 `bigSlice` 很大但不再使用，`subSlice` 会导致原来的大内存无法被 GC 回收。
-  - **解决**：使用 `copy` 复制需要的数据到新切片。
+  - **解决方式 1**：使用 `copy` 把需要的数据复制到新切片，让新切片彻底脱离原底层数组。
+  - **解决方式 2**：使用三索引切片表达式 `s[low:high:max]`，显式把新切片的 `cap` 限制为 `max - low`，防止后续 `append` 越界写到原数组的其它区域。注意这只是限制"共享范围"，并不能让原底层数组提前被回收——只要还有任何切片引用它，它就不会被 GC 回收，真正省内存还是要靠 `copy`。
+
+- **`append` 是否会影响原切片，取决于是否触发扩容**：
+  ```go
+  a := make([]int, 3, 5) // len=3, cap=5，还有富余容量
+  b := a[:2]              // b 与 a 共享底层数组
+
+  b = append(b, 100)      // 未超过 cap，原地写入底层数组
+  fmt.Println(a)          // a 的第 3 个元素被 b 的 append 悄悄改掉了
+
+  c := make([]int, 3, 3) // len=3, cap=3，容量已满
+  d := c[:2]
+  d = append(d, 999)      // 超过 cap，触发扩容，分配新的底层数组
+  fmt.Println(c)          // c 不受影响，因为 d 已经指向新数组
+  ```
+  - 只要 `append` 没有超过原 `cap`，就是在原底层数组上原地修改，多个共享同一底层数组的切片会互相"串数据"。
+  - 一旦超过 `cap` 触发扩容，`append` 会分配新的底层数组并拷贝数据，扩容后的切片和原切片就彻底不再共享。
+  - 不能想当然地认为"从一个切片派生出来的子切片是天然隔离的"——是否隔离取决于容量是否够用，这是这道题的核心陷阱。
+
+- **为什么必须写 `s = append(s, x)`，不能只写 `append(s, x)`**：
+  - `append` 返回的是一个新的 slice header（可能是新的 `ptr/len/cap`，也可能只是 `len` 变化），本身不会修改调用者手里那个 `s` 变量。
+  - 不重新赋值的话，调用者手里的 `s` 还是旧 header：轻则看不到刚 append 进去的元素，重则在触发扩容的场景下完全指向了错误（旧）的底层数组。
 
 ---
 
@@ -350,6 +398,28 @@ Map 是基于 **Hash Table** 实现的，核心是 `hmap` 结构体：
 - **buckets**：指向桶数组的指针，每个桶（bmap）可存储最多 8 个键值对。
 - **overflow**：溢出桶，用于解决哈希冲突（链地址法）。
 - **B**：桶数量的对数（2^B = 桶数）。
+
+**扩容机制（渐进式 / 增量 rehash，面试高频）：**
+- 触发条件主要有两类：**负载因子过高**（元素个数 / 桶数超过阈值，默认约 6.5）触发"翻倍扩容"；**溢出桶过多**（哈希冲突严重，但负载因子不高）触发"等量扩容"（桶数不变，只是把数据重新整理得更紧凑）。
+- 关键点是**渐进式**：扩容不会在触发的那一刻把所有旧数据一次性搬完，而是把旧的桶数组保留在 `oldbuckets`，之后每次对这个 map 做增、删、改、查操作时，**顺带搬迁一小部分**（通常是本次操作涉及到的那个桶）数据到新桶数组，直到所有旧数据迁移完毕才真正释放 `oldbuckets`。
+- 这样设计是为了避免"一次性搬迁"在数据量很大时造成一次长时间的停顿，把搬迁成本摊到后续多次操作里。
+- 和切片扩容的核心区别：切片扩容是**换一块新内存、整体拷贝**；map 扩容是**保留旧桶、按需增量迁移**，迁移期间新旧两套桶数组会同时存在一段时间。
+
+**`map[key].Field = x` 编译报错（面试高频陷阱）：**
+```go
+type Point struct{ X, Y int }
+m := map[string]Point{"a": {1, 2}}
+
+// m["a"].X = 10 // 编译错误：cannot assign to struct field m["a"].X in map
+```
+- 原因：map 的 value 在内部是**不可寻址**的（取不到它的地址），因为 map 随时可能因为扩容而把 value 挪到新的内存位置，如果允许对 value 直接取地址修改，这个地址随时可能失效。
+- **正确做法 1**：整体取出、修改、再放回去。
+  ```go
+  p := m["a"]
+  p.X = 10
+  m["a"] = p
+  ```
+- **正确做法 2**：让 value 存指针，`map[string]*Point`，这样 `m["a"].X = 10` 就是合法的（修改的是指针指向的堆上数据，而不是 map 内部的 value）。
 
 **并发问题：**
 - **原生 map 非并发安全**。并发读写、并发写写都属于未同步并发访问，运行时可能直接 panic，也可能表现为数据竞争。
@@ -457,9 +527,28 @@ fmt.Println(e.Name)  // 直接访问
 - 值类型和指针类型的方法集不同。
 - `T` 的方法集不包含 `*T` 独有的方法；`*T` 的方法集通常同时包含接收者为 `T` 和 `*T` 的方法。
 
+**7. 类型断言（Type Assertion）与类型转换的区别**
+- **类型转换（Conversion）**：`T(x)`，用于两个类型之间显式转换（比如 `int64(x)`、`string(b)`），要求类型在语义上兼容，编译期就能确定是否合法。
+- **类型断言（Type Assertion）**：`x.(T)`，只能用在**接口类型的值**上，用来判断/提取它内部实际存储的动态类型：
+  ```go
+  var i interface{} = "hello"
+
+  s := i.(string)         // 直接断言：如果 i 的动态类型不是 string，会直接 panic
+  s, ok := i.(string)     // comma-ok 断言：类型不匹配时 ok=false，不会 panic，s 是 string 的零值
+  if !ok {
+      fmt.Println("i 不是 string 类型")
+  }
+  ```
+- **面试要点**：不确定接口里存的动态类型时，一定要用 `v, ok := i.(T)` 这种"安全断言"形式；只有非常确定类型、且断言失败就应该直接崩溃（相当于前置条件被破坏）的场景，才用不带 `ok` 的形式。`switch` 版本的 `i.(type)`（type switch）常用来一次性处理多种可能的动态类型。
+
 ---
 
 ## 并发编程 / Runtime
+
+> **Go 并发哲学（面试常问）：** Go 遵循 CSP（Communicating Sequential Processes）并发模型，核心理念是**"不要通过共享内存来通信，而要通过通信来共享内存"（Don't communicate by sharing memory; share memory by communicating）**。
+> - 需要**编排执行顺序、传递数据所有权**时，优先用 **channel**：goroutine 之间通过传递消息协作，而不是直接读写同一个变量。
+> - 需要**保护一段共享状态**（比如一个 map、一个计数器）时，用 **mutex / atomic** 往往更直接、开销更小，不必为了"用 channel 而用 channel"。
+> - 两者不是互斥选择，实际项目里经常混用：channel 负责编排 goroutine 生命周期和数据流，mutex/atomic 负责保护局部共享状态。
 
 ### 16. GMP 调度模型详解？
 
@@ -511,12 +600,17 @@ Go 的调度器是 **G-M-P 三元模型**：`G` 是待运行任务，`M` 是真�
 - **误区 3**：work stealing 是线程之间偷任务。  
   更准确地说，是**持有空闲 P 的 M** 去别的 **P 的本地队列** 偷任务。
 
+**容器环境下的坑（生产高频）：**
+- Go 默认按**宿主机**的 CPU 核数设置 `GOMAXPROCS`（即默认等于 P 的数量），但在 Docker/Kubernetes 里，容器实际能用的 CPU 往往被 cgroup（`cpu.cfs_quota_us` 等）限制得更小。
+- 如果 `GOMAXPROCS` 远大于容器实际可用的核数，运行时会创建过多的 P/M 去争抢有限的 CPU 时间片，导致频繁的 CPU throttling、调度抖动，反而拖累性能。
+- 常见解法：使用 `uber-go/automaxprocs` 库，在程序启动时自动读取 cgroup 限制并设置合理的 `GOMAXPROCS`，或者根据容器 CPU limit 手动显式设置。
+
 ### 17. Goroutine 与 线程（Thread）的区别？
 
 **答案：**
 | 特性 | Goroutine | OS Thread |
 |------|-----------|-----------|
-| **内存占用** | 初始 2KB，动态收缩 | 默认 1-8MB (固定) |
+| **内存占用** | 初始 2KB，动态收缩 | 通常 1-8MB，创建时确定，具体默认值因操作系统/配置而异 |
 | **创建/销毁** | 极快 (用户态操作) | 慢 (内核态系统调用) |
 | **切换成本** | 低（由 runtime 调度，通常只需较小的用户态上下文切换） | 高（由内核调度，涉及更完整的线程上下文切换） |
 | **调度** | Go Runtime (M:N 模型) | 操作系统内核 (1:1 模型) |
@@ -542,16 +636,130 @@ Go 的调度器是 **G-M-P 三元模型**：`G` 是待运行任务，`M` 是真�
 - `sendq/recvq`: 等待发送/接收的 Goroutine 队列（双向链表 `sudoG`）
 - `lock`: 互斥锁（所有操作都需加锁，所以 Channel 并非无锁设计）
 
+**无缓冲 channel vs 有缓冲 channel：**
+
+| 类型 | 语义 | 特点 |
+|------|------|------|
+| **无缓冲 channel**（`make(chan T)`） | **同步（Rendezvous）**：发送方和接收方必须同时就绪才能完成一次通信 | 常用于 goroutine 间的**同步信号**，比如"等某个任务做完再继续" |
+| **有缓冲 channel**（`make(chan T, n)`） | **异步（在缓冲区未满/非空时）**：发送方在缓冲区未满时无需等待接收方 | 更接近"队列"语义，常用于限流、解耦生产者和消费者 |
+
+- 判断是否阻塞的关键不是"有没有缓冲"，而是**缓冲区是否已满（发送时）/是否为空（接收时）**；无缓冲 channel 可以理解成 `cap=0` 的特例，缓冲永远视为"满"，所以每次发送都要等接收方就绪。
+
+**close 的广播语义（面试高频）：**
+```go
+done := make(chan struct{})
+
+for i := 0; i < 3; i++ {
+    go func(id int) {
+        <-done // 阻塞等待
+        fmt.Println("worker", id, "exit")
+    }(i)
+}
+
+close(done) // 一次 close，唤醒所有阻塞在 done 上的 goroutine
+```
+- `close(ch)` 会让**所有**阻塞在该 channel 上的 receiver 同时被唤醒并返回零值，这是"一对多广播 / 优雅退出信号"最常见的实现方式（`context.Done()` 内部原理正是如此）。
+- 对比：向 channel 发送一个值（`ch <- x`）一次只会唤醒**一个**等待的 receiver；只有 `close` 才是"广播"给所有等待者。
+
+**谁该负责关闭 channel：**
+- **原则：只有发送方（sender）可以关闭 channel，接收方不应该关闭**——接收方通常无法确定是否还有其它 sender 在使用这个 channel。
+- **多个 sender 的场景**：不能让任意一个 sender 随意 `close`，否则重复关闭（`close of closed channel`）或其它 sender 继续往已关闭的 channel 发送（`send on closed channel`）都会直接 panic。常见做法是引入专门的协调机制（如 `sync.Once` 保证只关闭一次，或用额外的 done channel 通知所有 sender 停止发送后再由某一方统一关闭）。
+- **经验法则**：拿不准该不该关闭时，通常更安全的做法是"不主动关闭"，让 channel 随 goroutine 结束被 GC 回收；只有确实需要用 close 做广播通知时才主动关闭。
+
 ### 19. 常见的并发同步模式？
 
 **答案：**
 
 1. **WaitGroup**: 等待一组 Goroutine 完成。
+   - **陷阱 1**：`Add` 必须在启动 goroutine **之前**（在 `go` 语句外部）调用；如果把 `Add` 放进 goroutine 内部，主 goroutine 的 `Wait()` 可能在计数器还没被真正加上去之前就已经返回了。
+   - **陷阱 2**：`WaitGroup` 内部持有状态，**不能被拷贝**，必须以指针（`*sync.WaitGroup`）或结构体嵌入的方式在多个函数间传递。
+   ```go
+   var wg sync.WaitGroup
+   for i := 0; i < 3; i++ {
+       wg.Add(1) // 在 go 语句之前调用
+       go func(id int) {
+           defer wg.Done()
+           // 工作
+       }(i)
+   }
+   wg.Wait()
+   ```
 2. **ErrGroup**: 类似 WaitGroup，但能捕获第一个返回的错误，且支持 Context 取消。
+   ```go
+   g, ctx := errgroup.WithContext(context.Background())
+   for i := 0; i < 3; i++ {
+       id := i
+       g.Go(func() error {
+           select {
+           case <-ctx.Done():
+               return ctx.Err()
+           default:
+           }
+           if id == 1 {
+               return fmt.Errorf("task %d failed", id)
+           }
+           return nil
+       })
+   }
+   if err := g.Wait(); err != nil {
+       fmt.Println("first error:", err) // 只拿到第一个返回的 error
+   }
+   ```
+   - 只要有一个 `g.Go` 里的函数返回非 nil error，`errgroup.WithContext` 返回的 `ctx` 就会被取消，其它还在跑的 goroutine 可以据此提前退出。
 3. **Select**: 多路复用，用于处理多个 Channel。
    - **Pseudo-random fairness**: 如果多个 case 同时就绪，运行时会做伪随机选择，不要依赖固定顺序。
+   - **非阻塞读写**：配合 `default` 分支可以实现非阻塞的尝试收发，常用于"能拿到就处理，拿不到就跳过"的场景：
+     ```go
+     select {
+     case v := <-ch:
+         fmt.Println("received", v)
+     default:
+         fmt.Println("channel not ready, skip")
+     }
+     ```
 4. **Context**: 级联取消与超时控制。
 5. **Sync.Once**: 单例模式，底层使用 `atomic` + `mutex` 保证只执行一次。
+6. **`len(ch)` / `cap(ch)`**：`len` 返回缓冲区中当前已有的元素个数，`cap` 返回缓冲区总容量（无缓冲 channel 恒为 0）。可以用来观测队列积压情况，但不要拿它做同步判断依据——多个 goroutine 并发操作时这两个值随时可能变化，存在竞态。
+7. **经典 channel 应用模式（常考"手撕代码"）**：
+   - **生产者/消费者**：一个或多个 goroutine 往 channel 发数据，另一些 goroutine 从 channel 取数据处理，channel 天然是并发安全的队列。
+   - **Worker Pool**：固定数量的 worker 从同一个任务 channel 里取任务，用来限制并发数：
+     ```go
+     func worker(id int, jobs <-chan int, results chan<- int) {
+         for j := range jobs {
+             results <- j * j
+         }
+     }
+
+     func main() {
+         jobs := make(chan int, 100)
+         results := make(chan int, 100)
+
+         for w := 1; w <= 3; w++ {
+             go worker(w, jobs, results)
+         }
+
+         for j := 1; j <= 9; j++ {
+             jobs <- j
+         }
+         close(jobs) // 通知所有 worker：任务已经发完
+
+         for a := 1; a <= 9; a++ {
+             <-results
+         }
+     }
+     ```
+   - **Fan-out / Fan-in**：Fan-out 是多个 goroutine 从同一个 channel 读任务（如上面的 worker pool）；Fan-in 是把多个 channel 的输出合并到一个 channel，通常再起一个 goroutine 配合 `sync.WaitGroup` 实现。
+8. **sync.Mutex 与饥饿模式（Starvation Mode，面试常问细节）**：
+   - Go 1.9+ 的 `Mutex` 有两种内部模式：**正常模式**和**饥饿模式**。
+   - 正常模式下，新来的 goroutine 允许"插队"竞争锁（类似 barging lock），吞吐量更高，但可能导致某个等待较久的 goroutine 一直抢不到锁。
+   - 如果一个等待者排队时间超过 **1ms** 还没拿到锁，`Mutex` 会切换到饥饿模式：此时锁会严格按照 FIFO 顺序移交给等待队列里排最前面的 goroutine，新来的 goroutine 不能插队，防止某些 goroutine 被"饿死"。
+   - 当等待队列只剩一个 goroutine，或者该 goroutine 的等待时间已经小于 1ms 时，会自动切回正常模式。
+   - 面试里记住一句话即可：**Mutex 不是纯粹的先来先得，而是"正常模式追求吞吐、饥饿模式保证公平"的混合策略**。
+9. **atomic 包 / CAS（原子操作）**：
+   - `sync/atomic` 提供 `AddInt64`、`LoadInt64`、`StoreInt64`、`CompareAndSwapInt64`（CAS）等函数，以及 Go 1.19+ 的 `atomic.Int64` 等封装类型。
+   - CAS（Compare-And-Swap）的语义：只有当前值等于预期的旧值时，才把它替换为新值，否则不做任何修改并返回失败；调用方通常配合一个重试循环使用。
+   - 原子操作由 CPU 指令直接保证，不涉及 goroutine 挂起/唤醒的调度开销，所以在**简单场景**（比如一个计数器）下通常比 `Mutex` 更轻量；但如果要保护的是多个字段组成的复合状态，用 atomic 容易漏掉某个字段的同步，这时用 `Mutex` 更安全、更易读。
+   - 经验法则：**保护单个简单数值用 atomic，保护一段复合逻辑/多个字段用 Mutex**。
 
 ### 20. Context 的深度理解？
 
@@ -749,6 +957,68 @@ func main() {
 // 输出: Defer Closure: 2
 ```
 
+**defer 修改命名返回值（面试高频，常作为"压轴题"）：**
+```go
+func f() (result int) {
+    defer func() {
+        result++ // 修改的是命名返回值 result 本身
+    }()
+    return 0
+}
+fmt.Println(f()) // 输出 1，不是 0
+```
+- 原理：`return 0` 实际上分两步——先把 `0` 赋值给命名返回值 `result`，然后再执行 defer，最后才真正返回 `result` 当前的值；defer 执行在赋值之后、真正返回之前，所以能修改最终的返回结果。
+- 如果返回值**不是命名返回值**（比如 `func f() int`），defer 里操作的是局部变量，无法影响已经确定要返回的值。
+- 这也是"用 `defer` + `recover` 把 panic 转换成 error 返回"这种写法成立的前提——必须用命名返回值：
+  ```go
+  func safeDiv(a, b int) (result int, err error) {
+      defer func() {
+          if r := recover(); r != nil {
+              err = fmt.Errorf("recovered: %v", r) // 修改命名返回值 err
+          }
+      }()
+      result = a / b
+      return
+  }
+  ```
+
+**defer 在循环中容易导致资源堆积：**
+```go
+// 有问题的写法：defer 会一直堆到函数结束才执行
+func processFiles(paths []string) error {
+    for _, p := range paths {
+        f, err := os.Open(p)
+        if err != nil {
+            return err
+        }
+        defer f.Close() // paths 一多，文件句柄会堆积到函数返回时才统一释放
+        // 处理 f ...
+    }
+    return nil
+}
+
+// 更安全的写法：把单次处理拆成独立函数，defer 随每次函数调用结束就执行
+func processFile(p string) error {
+    f, err := os.Open(p)
+    if err != nil {
+        return err
+    }
+    defer f.Close()
+    // 处理 f ...
+    return nil
+}
+
+func processFiles(paths []string) error {
+    for _, p := range paths {
+        if err := processFile(p); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+```
+- `defer` 只在**函数返回时**才执行，不是"每次循环结束"就执行；如果在一个长循环里对每次迭代都注册 defer，资源会一直占用到整个函数返回才被释放，循环量大时可能耗尽文件描述符、数据库连接等有限资源。
+
 ### 26. for-range 的循环变量陷阱？
 
 **答案：**
@@ -778,6 +1048,26 @@ for _, v := range []int{1, 2, 3} {
     }(v)
 }
 ```
+
+**for-range 遍历 map 时顺序是随机的（另一个高频点）：**
+```go
+m := map[string]int{"a": 1, "b": 2, "c": 3}
+for k, v := range m {
+    fmt.Println(k, v) // 每次运行程序，打印顺序都可能不一样
+}
+```
+- Go 运行时会**故意**打乱 map 的遍历顺序（每次遍历的起点、bucket 遍历顺序都会被随机化），目的是防止开发者依赖某种"看起来固定"的顺序写出脆弱代码。
+- 如果需要按固定顺序遍历 map（比如按 key 排序输出），要先把 key 取出来排序，再按排序后的 key 依次访问：
+  ```go
+  keys := make([]string, 0, len(m))
+  for k := range m {
+      keys = append(keys, k)
+  }
+  sort.Strings(keys)
+  for _, k := range keys {
+      fmt.Println(k, m[k])
+  }
+  ```
 
 ### 27. Option 设计模式
 
@@ -812,12 +1102,130 @@ srv := NewServer(WithPort(9090))
 ```
 **优点：** 扩展性强，支持默认值，无需破坏原有接口。
 
+### 28. 字符串遍历的字节（byte）与码点（rune）陷阱？
+
+**答案：**
+Go 的 `string` 底层是 UTF-8 编码的**只读字节序列**，直接用下标访问和用 `for range` 遍历，拿到的是完全不同的东西。
+
+```go
+s := "中文A"
+
+fmt.Println(len(s)) // 7：字节数，不是字符数（"中""文"各占 3 字节，"A" 占 1 字节）
+
+for i := 0; i < len(s); i++ {
+    fmt.Printf("%d ", s[i]) // 按字节遍历，中文字符会被拆成多个字节
+}
+
+for i, r := range s {
+    fmt.Printf("%d:%c ", i, r) // 按 rune（Unicode 码点）遍历
+}
+```
+
+**关键点：**
+- `len(s)`：返回**字节长度**，不是字符个数。
+- `s[i]`：返回第 `i` 个**字节**（`byte`），不是第 `i` 个字符；对中文等多字节字符直接按字节下标截取，很容易切出乱码。
+- `for range s`：按 UTF-8 解码出 `rune`，其中 `i` 是该字符在字节序列里的**起始偏移量**，不是"第几个字符"——相邻字符之间 `i` 的间隔可能是 1、2、3、4，取决于该字符占几个字节。
+- 想拿到"字符个数"，用 `utf8.RuneCountInString(s)`，或者 `len([]rune(s))`（后者要先做一次完整的类型转换，有额外开销）。
+- 想按字符做切片/替换等操作，通常需要先转成 `[]rune`，处理完再转回 `string`。
+
+### 29. new 和 make 的区别是什么？
+
+**答案：**
+两者都用于内存分配，但适用类型和返回值完全不同。
+
+| 特性 | `new(T)` | `make(T, ...)` |
+|------|----------|----------------|
+| **适用类型** | 任意类型 | 仅限 `slice`、`map`、`channel` |
+| **返回值** | 类型为 `*T` 的指针，指向一块**零值**内存 | 类型 `T` 本身（不是指针），已完成必要的内部初始化，可以直接使用 |
+| **典型场景** | 需要一个指向零值的指针时 | 需要一个"随时可用"的 slice/map/channel 时 |
+
+```go
+p := new(int)      // p 是 *int，指向的值是 0
+fmt.Println(*p)     // 0
+
+m := make(map[string]int) // m 是可以直接读写的空 map，不是指针
+m["a"] = 1
+
+s := make([]int, 0, 10)   // s 是可以直接 append 的切片
+```
+- 一个常见误区："`make` 是 `new` 的语法糖"——并不是。`slice`/`map`/`channel` 内部都有额外的运行时状态（比如 map 的桶数组、channel 的缓冲区），仅仅拿到一个"零值指针"（`new` 的效果）并不能让它们正常工作，必须用 `make` 完成这部分初始化。
+
+### 30. 字符串为什么是不可变的？
+
+**答案：**
+Go 的 `string` 一旦创建，其内容不能被原地修改。
+
+```go
+s := "hello"
+// s[0] = 'H' // 编译错误：cannot assign to s[0] (neither addressable nor a map index expression)
+```
+- 要"修改"字符串，本质上是**创建一个新的字符串**，而不是原地改动：
+  ```go
+  b := []byte(s)
+  b[0] = 'H'
+  s = string(b) // s 现在指向一个新字符串 "Hello"
+  ```
+- 不可变性带来的好处：多个变量、多个 goroutine 可以安全地共享同一份字符串底层数据，不用担心被谁意外改动，天然是并发安全的；也方便运行时做字符串常量之类的优化。
+- 代价：频繁拼接/修改字符串会不断产生新的底层数组和垃圾，高频拼接场景应该用 `strings.Builder`（见前面性能优化一节），而不是反复 `+=`。
+
+### 31. switch 的 fallthrough 陷阱？
+
+**答案：**
+和 C/Java 不同，Go 的 `switch` 语句**默认不会贯穿到下一个 `case`**，每个 `case` 执行完会自动跳出，不需要显式写 `break`。
+
+```go
+switch x := 2; x {
+case 1:
+    fmt.Println("one")
+case 2:
+    fmt.Println("two") // 只会打印这一行
+case 3:
+    fmt.Println("three")
+}
+```
+- 如果确实需要像 C 那样"贯穿执行下一个 `case`"，必须显式写 `fallthrough`：
+  ```go
+  switch x := 2; x {
+  case 2:
+      fmt.Println("two")
+      fallthrough // 显式声明贯穿
+  case 3:
+      fmt.Println("three") // 也会被执行
+  }
+  ```
+- **陷阱点**：`fallthrough` 会无条件执行紧跟着的下一个 `case` 代码块，**不会再判断下一个 case 的条件**，即使下一个 case 的条件本身不满足也照样执行；而且 `fallthrough` 必须是当前 `case` 代码块里的最后一条语句。
+- 从 C/Java 转来的人容易犯反方向的错误：以为 Go 也需要手动写 `break` 才能防止贯穿——实际上什么都不写就已经是"不贯穿"的效果了。
+
+### 32. 结构体的可比较性？
+
+**答案：**
+结构体能不能用 `==` 比较，取决于它的**每一个字段**是否都是可比较类型。
+
+```go
+type Point struct {
+    X, Y int
+}
+p1 := Point{1, 2}
+p2 := Point{1, 2}
+fmt.Println(p1 == p2) // true，int 字段可比较，逐字段比较相等
+
+type Data struct {
+    Name  string
+    Items []int // 切片字段
+}
+d1 := Data{"a", []int{1}}
+d2 := Data{"a", []int{1}}
+// fmt.Println(d1 == d2) // 编译错误：invalid operation: d1 == d2 (struct containing []int cannot be compared)
+```
+- 只要结构体里包含 `slice`、`map`、`func` 类型的字段（这三种类型本身都不可比较），整个结构体就变得不可比较，`==` 会直接编译报错，而不是运行时 panic。
+- 需要比较这类结构体时，通常用 `reflect.DeepEqual`，或者自己写一个逐字段比较的 `Equal` 方法（性能通常比 `reflect.DeepEqual` 好很多）。
+- 这个规则和第 8 题提到的"切片不可比较"一脉相承：结构体的可比较性由其字段递归决定。
 
 ---
 
 ## 错误处理
 
-### 28. Golang 的错误处理机制是什么？
+### 33. Golang 的错误处理机制是什么？
 
 **答案：**
 Go 使用显式错误处理，通过返回值返回错误。
@@ -880,7 +1288,20 @@ if errors.As(err, &targetErr) {
 - 业务代码里优先用 `errors.Is` / `errors.As`，不要过度依赖字符串匹配。
 - `errors.Unwrap` 更偏底层工具；实际判断链路里的错误类型时，`Is/As` 更常用。
 
-### 29. panic 和 recover 是什么？
+**为什么不能直接用 `==` 判断 sentinel error（面试高频）：**
+```go
+var ErrNotFound = errors.New("not found")
+
+err := fmt.Errorf("query user failed: %w", ErrNotFound) // 包装后是一个新的 error 对象
+
+fmt.Println(err == ErrNotFound)          // false！包装后已经不是同一个对象了
+fmt.Println(errors.Is(err, ErrNotFound)) // true，会沿着 Unwrap() 链逐层比较
+```
+- `fmt.Errorf("...: %w", err)` 包装出来的是一个**新的** error 值，直接用 `==` 只会比较两个接口值是否指向同一个对象，包装之后必然不相等。
+- `errors.Is` 会不断调用被比较 error 的 `Unwrap()` 方法，沿着包装链一层层往下找，只要链上任意一层和目标 error 相等（或该层实现了 `Is(error) bool` 方法且返回 true），就判定为匹配。
+- `errors.As` 类似，但找的不是"是不是这个特定值"，而是"链上有没有某个类型的 error"，找到后会把它赋值给传入的目标变量。
+
+### 34. panic 和 recover 是什么？
 
 **答案：**
 
@@ -910,6 +1331,22 @@ func safeCall() {
 }
 ```
 
+**Goroutine 内 panic 不 recover 会拖垮整个进程（面试高频）：**
+- 一个 goroutine 里发生的 panic，如果没有在**这个 goroutine 自己的调用栈**上被 `recover`，会导致**整个进程**直接退出——不仅仅是这个 goroutine 结束，其它正在运行的 goroutine 也会被一起终止。
+- 这一点和不少语言不同（比如 Java 里子线程抛出未捕获异常通常只影响这个线程本身），是 Go 里经常被拿来对比的坑点。
+- 因此实际项目中，**每个独立启动的 goroutine（尤其是 worker、后台任务）最外层都应该有自己的 `defer recover()`**，否则任何一个 worker 内部的 bug 都可能直接拖垮整个服务：
+  ```go
+  go func() {
+      defer func() {
+          if r := recover(); r != nil {
+              log.Printf("worker panic recovered: %v", r)
+          }
+      }()
+      doWork()
+  }()
+  ```
+- `recover()` 只有在**当前 goroutine 的 defer 函数**里直接调用才有效——在另一个 goroutine 里调用 `recover()` 救不了这里的 panic。
+
 **使用建议：**
 - **panic**：常用于真正违反前置条件、程序状态损坏、或 runtime 级致命错误；不是普通业务错误处理机制
 - **recover**：常用于进程边界或 goroutine 边界做兜底，避免整个服务直接崩掉
@@ -919,7 +1356,7 @@ func safeCall() {
 
 ## 包管理
 
-### 30. Go Modules 是什么？
+### 35. Go Modules 是什么？
 
 **答案：**
 Go Modules 是 Go 1.11+ 的官方包管理工具。
@@ -959,11 +1396,16 @@ go mod graph         # 查看依赖图
 - **latest**：由 `go` 命令按模块解析规则选择的版本，不等价于“仓库里最新 tag 的字面意思”
 - **伪版本**：v0.0.0-20231227123456-abcdef
 
+**语义化导入版本（Semantic Import Versioning，容易被问到的细节）：**
+- Go Modules 规定：模块升级到 **v2 及以上大版本**时，import path 必须带上主版本号后缀，比如 `example.com/myproject/v2`，且 `go.mod` 里的 `module` 声明也要相应改成 `module example.com/myproject/v2`。
+- 这样设计是为了让同一个项目的 v1 和 v2（可能有不兼容的 API 变更）可以被同一个程序**同时依赖**，因为它们在 Go 看来是两个不同的 import path，不会冲突。
+- v0 和 v1 不需要这个后缀，只有 v2 开始才需要；这也是为什么很多库会尽量避免升到 v2，因为一旦升级，所有引用它的地方都要把 import path 改一遍。
+
 ---
 
 ## 性能优化
 
-### 31. 如何优化 Golang 程序性能？
+### 36. 如何优化 Golang 程序性能？
 
 **答案：**
 
@@ -1030,7 +1472,29 @@ wg.Wait()
 ```
 并发不必然更快；只有任务足够独立、CPU 或 I/O 能真正并行时才有收益。
 
-### 32. Golang 的编译优化有哪些？
+**7. 编写 Benchmark 验证优化效果**
+```go
+func BenchmarkConcat(b *testing.B) {
+    for i := 0; i < b.N; i++ {
+        var sb strings.Builder
+        sb.WriteString("hello")
+        sb.WriteString(" world")
+        _ = sb.String()
+    }
+}
+```
+```bash
+go test -bench=. -benchmem
+```
+- `b.N` 由测试框架自动调整，直到测试运行时间足够稳定；`-benchmem` 会额外输出每次操作的内存分配次数和字节数（`allocs/op`、`B/op`），做内存优化时这两个指标比单纯看耗时更有参考价值。
+- 面试/实际优化时的标准流程是：**先用 benchmark 定基线 → 用 pprof 定位热点 → 优化 → 再跑一遍 benchmark 对比**，而不是凭感觉改代码。
+
+**8. GC 调优：`GOGC` / `GOMEMLIMIT`**
+- `GOGC`（默认 100）：控制触发 GC 的时机——当新分配的堆内存达到上次 GC 后存活内存的 `GOGC%` 时触发下一次 GC；调大 `GOGC` 会让 GC 触发得更少，用更多内存换更少的 GC 开销，调小则相反。也可以用 `debug.SetGCPercent` 在代码里动态调整。
+- `GOMEMLIMIT`（Go 1.19+）：给运行时设置一个软性的内存使用上限，运行时会更积极地触发 GC 来避免超过这个上限，比单纯调 `GOGC` 更适合"容器内存有硬限制"的场景（比如 K8s 里设置了 memory limit）。
+- 面试要点：这两个是"如何在延迟和内存占用之间做权衡"的调优手段，不是用来修复内存泄漏本身的——真正的泄漏还是要靠第 23 题里提到的 pprof/trace 去定位。
+
+### 37. Golang 的编译优化有哪些？
 
 **答案：**
 
@@ -1060,7 +1524,7 @@ go build -gcflags=-m -m main.go
 
 ## 常见问题与最佳实践
 
-### 33. 如何避免常见的并发问题？
+### 38. 如何避免常见的并发问题？
 
 **答案：**
 
@@ -1080,6 +1544,12 @@ go func() {
     counter++
 }()
 ```
+**检测工具**：写完并发代码后，建议用 Go 自带的竞态检测器跑一遍：
+```bash
+go run -race main.go
+go test -race ./...
+```
+`-race` 会在运行时插桩检测对同一块内存的并发读写是否有恰当同步，发现问题会打印出具体的 goroutine 调用栈；生产环境不建议直接开启（有性能和内存开销），但测试/CI 阶段建议常态化跑一遍。
 
 **2. 死锁（Deadlock）**
 ```go
@@ -1133,7 +1603,7 @@ go func() {
 ```
 如果循环体有实际工作，优先通过可阻塞的 channel / ticker / I/O 驱动；滥用 `default` 容易写成空转 busy loop。
 
-### 34. Golang 的最佳实践有哪些？
+### 39. Golang 的最佳实践有哪些？
 
 **答案：**
 
@@ -1227,8 +1697,8 @@ slog.Info("user created", "id", user.ID, "ip", req.RemoteAddr)
 - 工程项目里通常建议在 CI/CD 集成 `golangci-lint`。
 - **Uber Go Style Guide 重点**：
   - 避免 `interface{}`，尽量使用具体类型。
-  - 接口定义在消费者（Consumer）一侧，而非生产者（Producer）。
   - 处理所有错误，不要使用 `_` 忽略 `err`。
+- **Go 社区惯例（并非 Uber 独有）**：接口定义在消费者（Consumer）一侧，而非生产者（Producer）。
 
 ---
 
